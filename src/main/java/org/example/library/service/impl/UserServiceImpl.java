@@ -1,17 +1,20 @@
 package org.example.library.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.example.library.congif.UserDetails;
 import org.example.library.entity.Book;
 import org.example.library.entity.User;
 import org.example.library.entity.dto.UserDTO;
 import org.example.library.entity.dto.mapper.UserMapper;
 import org.example.library.repository.BookRepository;
 import org.example.library.repository.UserRepository;
+import org.example.library.security.UserMailService;
 import org.example.library.service.UserService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -20,11 +23,18 @@ import java.util.Optional;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
+    private final PasswordEncoder encoder;
+    private final UserMailService mailService;
 
 
     @Override
-    public User createUser(UserDTO user) {
-       return userRepository.save(UserMapper.toEntity(user));
+    public UserDTO createUser(User user) {
+        user.setPassword(encoder.encode(user.getPassword()));
+        user.setVerificationCode(RandomStringUtils.randomAlphanumeric(32));
+        user.setEnabled(false);
+        userRepository.save(user);
+        mailService.sendVerificationMail(user);
+       return UserMapper.toDTO(user);
     }
 
     @Override
@@ -65,6 +75,17 @@ public class UserServiceImpl implements UserService {
             userRepository.save(presentUser);
             return (UserMapper.toDTO(presentUser));
 
+        }else throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User id or book id does not exist.");
+    }
+
+    @Override
+    public User verify(String code) {
+        Optional<User> verifyUser = userRepository.findByVerificationCode(code);
+        if (verifyUser.isPresent()){
+            verifyUser.get().setVerificationCode(null);
+            verifyUser.get().setEnabled(true);
+//            UserDetails userDetails = new UserDetails(verifyUser.get()).se
+            return userRepository.save(verifyUser.get());
         }else throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User id or book id does not exist.");
     }
 

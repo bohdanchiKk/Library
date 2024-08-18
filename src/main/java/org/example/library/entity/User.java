@@ -23,6 +23,14 @@ public class User {
     private String lastName;
     @Column(name = "email", unique = true)
     private String email;
+    @Column(name = "password")
+    private String password;
+    @Column(name = "roles")
+    private String roles;
+    @Column(name = "verification")
+    private String verificationCode;
+    @Column(name = "enabled")
+    private boolean enabled;
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @BatchSize(size = 100)
     @ToString.Exclude
