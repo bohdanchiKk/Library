@@ -54,4 +54,6 @@ public class UserController {
     public User verify(@RequestParam String code) {
         return userService.verify(code);
     }
+
+
 }

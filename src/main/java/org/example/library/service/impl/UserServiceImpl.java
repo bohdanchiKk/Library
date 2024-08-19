@@ -12,11 +12,15 @@ import org.example.library.repository.UserRepository;
 import org.example.library.security.UserMailService;
 import org.example.library.service.UserService;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -84,9 +88,20 @@ public class UserServiceImpl implements UserService {
         if (verifyUser.isPresent()){
             verifyUser.get().setVerificationCode(null);
             verifyUser.get().setEnabled(true);
-//            UserDetails userDetails = new UserDetails(verifyUser.get()).se
             return userRepository.save(verifyUser.get());
         }else throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User id or book id does not exist.");
+    }
+
+    @Scheduled(fixedRate = 60000)
+    @Override
+    public String cleanUp() {
+        LocalDateTime cutOffTime = LocalDateTime.now().minusMinutes(1);
+        Optional<List<User>> unverifiedUsers = userRepository.findAllByEnabledFalseAndCreationTimeBefore(cutOffTime);
+
+        if (unverifiedUsers.isPresent()){
+            userRepository.deleteAll(unverifiedUsers.get());
+        }
+        return "cleaned up";
     }
 
     @Override
